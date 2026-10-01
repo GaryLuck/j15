@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15-Tile Puzzle</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #faf8ef;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #776e65;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        #puzzle-container {
+            position: relative;
+            width: 330px;
+            height: 330px;
+            background-color: #bbada0;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        .tile {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background-color: #eee4da;
+            color: #776e65;
+            font-size: 32px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 5px;
+            cursor: pointer;
+            user-select: none;
+            transition: top 0.15s ease-in-out, left 0.15s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tile.correct {
+            background-color: #f2b179;
+            color: #f9f6f2;
+        }
+        button {
+            padding: 10px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background-color: #8f7a66;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #9f8b77;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2e7d32;
+            min-height: 28px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>15 Puzzle</h1>
+    <div id="puzzle-container"></div>
+    <button id="shuffle-btn">Shuffle</button>
+    <div id="message"></div>
+
+    <script>
+        const container = document.getElementById('puzzle-container');
+        const shuffleBtn = document.getElementById('shuffle-btn');
+        const messageDiv = document.getElementById('message');
+        const SIZE = 4;
+        const TILE_SIZE = 80; // 70px size + 10px spacing
+        const OFFSET = 10;
+
+        let tiles = [];
+        let emptyPos = { row: SIZE - 1, col: SIZE - 1 };
+
+        function init() {
+            container.innerHTML = '';
+            tiles = [];
+            let value = 1;
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (r === SIZE - 1 && c === SIZE - 1) {
+                        break;
+                    }
+                    createTile(value, r, c);
+                    value++;
+                }
+            }
+            emptyPos = { row: SIZE - 1, col: SIZE - 1 };
+            messageDiv.innerText = '';
+            updateTiles();
+        }
+
+        function createTile(value, initialRow, initialCol) {
+            const tile = document.createElement('div');
+            tile.classList.add('tile');
+            tile.innerText = value;
+
+            tile.addEventListener('click', () => {
+                const currentTile = tiles.find(t => t.value === value);
+                if (canMove(currentTile.row, currentTile.col)) {
+                    moveTile(currentTile.row, currentTile.col);
+                    checkWin();
+                }
+            });
+
+            container.appendChild(tile);
+            tiles.push({ element: tile, value: value, row: initialRow, col: initialCol });
+        }
+
+        function updateTiles() {
+            tiles.forEach(tile => {
+                tile.element.style.top = `${tile.row * TILE_SIZE + OFFSET}px`;
+                tile.element.style.left = `${tile.col * TILE_SIZE + OFFSET}px`;
+
+                // Highlight if in correct position
+                const correctRow = Math.floor((tile.value - 1) / SIZE);
+                const correctCol = (tile.value - 1) % SIZE;
+                if (tile.row === correctRow && tile.col === correctCol) {
+                    tile.element.classList.add('correct');
+                } else {
+                    tile.element.classList.remove('correct');
+                }
+            });
+        }
+
+        function canMove(row, col) {
+            return (Math.abs(row - emptyPos.row) === 1 && col === emptyPos.col) ||
+                   (Math.abs(col - emptyPos.col) === 1 && row === emptyPos.row);
+        }
+
+        function moveTile(row, col) {
+            const tileIndex = tiles.findIndex(t => t.row === row && t.col === col);
+            if (tileIndex > -1) {
+                const tempRow = tiles[tileIndex].row;
+                const tempCol = tiles[tileIndex].col;
+
+                tiles[tileIndex].row = emptyPos.row;
+                tiles[tileIndex].col = emptyPos.col;
+
+                emptyPos.row = tempRow;
+                emptyPos.col = tempCol;
+
+                updateTiles();
+            }
+        }
+
+        function shuffle() {
+            messageDiv.innerText = '';
+            // Make 150 random valid moves
+            const moves = 150;
+            for (let i = 0; i < moves; i++) {
+                const movableTiles = tiles.filter(t => canMove(t.row, t.col));
+                if (movableTiles.length > 0) {
+                    const randomTile = movableTiles[Math.floor(Math.random() * movableTiles.length)];
+
+                    const tileIndex = tiles.findIndex(t => t === randomTile);
+                    const tempRow = tiles[tileIndex].row;
+                    const tempCol = tiles[tileIndex].col;
+                    tiles[tileIndex].row = emptyPos.row;
+                    tiles[tileIndex].col = emptyPos.col;
+                    emptyPos.row = tempRow;
+                    emptyPos.col = tempCol;
+                }
+            }
+            updateTiles();
+        }
+
+        function checkWin() {
+            let win = true;
+            for (let i = 0; i < tiles.length; i++) {
+                const t = tiles[i];
+                const expectedRow = Math.floor((t.value - 1) / SIZE);
+                const expectedCol = (t.value - 1) % SIZE;
+                if (t.row !== expectedRow || t.col !== expectedCol) {
+                    win = false;
+                    break;
+                }
+            }
+            if (win) {
+                messageDiv.innerText = 'You Win!';
+            }
+        }
+
+        shuffleBtn.addEventListener('click', shuffle);
+
+        init();
+        shuffle();
+
+    </script>
+</body>
+</html>
