@@ -1,211 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>15-Tile Puzzle</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #faf8ef;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            color: #776e65;
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-        #puzzle-container {
-            position: relative;
-            width: 330px;
-            height: 330px;
-            background-color: #bbada0;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
-            box-sizing: border-box;
-        }
-        .tile {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            background-color: #eee4da;
-            color: #776e65;
-            font-size: 32px;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 5px;
-            cursor: pointer;
-            user-select: none;
-            transition: top 0.15s ease-in-out, left 0.15s ease-in-out;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .tile.correct {
-            background-color: #f2b179;
-            color: #f9f6f2;
-        }
-        button {
-            padding: 10px 30px;
-            font-size: 18px;
-            font-weight: bold;
-            color: white;
-            background-color: #8f7a66;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.2s;
-        }
-        button:hover {
-            background-color: #9f8b77;
-        }
-        #message {
-            margin-top: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #2e7d32;
-            min-height: 28px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>15 Tile Puzzle</title>
+<style>
+:root{
+  --board-size:min(88vw,520px);
+  --gap:clamp(6px,1.4vw,10px);
+  --tile-size:calc((var(--board-size) - (5 * var(--gap))) / 4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;background:#f4f0e8;color:#2f2a25}
+body{
+  min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+.app{width:min(94vw,580px);text-align:center}
+h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
+.status{display:flex;justify-content:center;gap:24px;margin:8px 0 14px;font-size:clamp(16px,4vw,20px)}
+.board{
+  width:var(--board-size);
+  height:var(--board-size);
+  margin:0 auto;
+  padding:var(--gap);
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  grid-template-rows:repeat(4,1fr);
+  gap:var(--gap);
+  background:#7c6757;
+  border-radius:18px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  touch-action:manipulation;
+}
+.tile,.blank{
+  border:0;
+  border-radius:14px;
+  font-size:clamp(26px,8vw,46px);
+  font-weight:700;
+}
+.tile{
+  background:#f2b76d;
+  color:#34271d;
+  box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),0 2px 5px rgba(0,0,0,.16);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.tile:active{transform:scale(.97)}
+.tile:focus-visible{outline:4px solid #1a73e8;outline-offset:2px}
+.blank{background:transparent}
+.controls{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.controls button{
+  border:0;
+  border-radius:12px;
+  padding:12px 20px;
+  font-size:17px;
+  font-weight:700;
+  background:#5f4b3e;
+  color:white;
+  cursor:pointer;
+}
+.controls button:active{transform:translateY(1px)}
+.message{min-height:28px;margin-top:12px;font-size:20px;font-weight:700;color:#19733b}
+.note{margin:8px 0 0;font-size:14px;color:#6a625c}
+@media (max-height:650px){
+  body{align-items:flex-start;padding-top:8px}
+  h1{font-size:28px}
+  .status{margin:4px 0 8px}
+  .controls{margin-top:8px}
+  .message{margin-top:6px}
+}
+</style>
 </head>
 <body>
+<main class="app">
+  <h1>15 Tile Puzzle</h1>
+  <div class="status">
+    <span>Moves: <strong id="moves">0</strong></span>
+  </div>
 
-    <h1>15 Puzzle</h1>
-    <div id="puzzle-container"></div>
-    <button id="shuffle-btn">Shuffle</button>
-    <div id="message"></div>
+  <div id="board" class="board" aria-label="15 tile puzzle"></div>
 
-    <script>
-        const container = document.getElementById('puzzle-container');
-        const shuffleBtn = document.getElementById('shuffle-btn');
-        const messageDiv = document.getElementById('message');
-        const SIZE = 4;
-        const TILE_SIZE = 80; // 70px size + 10px spacing
-        const OFFSET = 10;
+  <div class="controls">
+    <button id="newGame" type="button">New Game</button>
+    <button id="reset" type="button">Reset</button>
+  </div>
 
-        let tiles = [];
-        let emptyPos = { row: SIZE - 1, col: SIZE - 1 };
+  <div id="message" class="message" aria-live="polite"></div>
+  <p class="note">Tap a tile next to the empty space to move it.</p>
+</main>
 
-        function init() {
-            container.innerHTML = '';
-            tiles = [];
-            let value = 1;
-            for (let r = 0; r < SIZE; r++) {
-                for (let c = 0; c < SIZE; c++) {
-                    if (r === SIZE - 1 && c === SIZE - 1) {
-                        break;
-                    }
-                    createTile(value, r, c);
-                    value++;
-                }
-            }
-            emptyPos = { row: SIZE - 1, col: SIZE - 1 };
-            messageDiv.innerText = '';
-            updateTiles();
-        }
+<script>
+(() => {
+  const SIZE = 4;
+  const SOLVED = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0];
 
-        function createTile(value, initialRow, initialCol) {
-            const tile = document.createElement('div');
-            tile.classList.add('tile');
-            tile.innerText = value;
+  const boardEl = document.getElementById('board');
+  const movesEl = document.getElementById('moves');
+  const messageEl = document.getElementById('message');
+  const newGameBtn = document.getElementById('newGame');
+  const resetBtn = document.getElementById('reset');
 
-            tile.addEventListener('click', () => {
-                const currentTile = tiles.find(t => t.value === value);
-                if (canMove(currentTile.row, currentTile.col)) {
-                    moveTile(currentTile.row, currentTile.col);
-                    checkWin();
-                }
-            });
+  let board = SOLVED.slice();
+  let startingBoard = SOLVED.slice();
+  let moves = 0;
+  let locked = false;
 
-            container.appendChild(tile);
-            tiles.push({ element: tile, value: value, row: initialRow, col: initialCol });
-        }
+  function neighbors(blankIndex) {
+    const row = Math.floor(blankIndex / SIZE);
+    const col = blankIndex % SIZE;
+    const result = [];
+    if (row > 0) result.push(blankIndex - SIZE);
+    if (row < SIZE - 1) result.push(blankIndex + SIZE);
+    if (col > 0) result.push(blankIndex - 1);
+    if (col < SIZE - 1) result.push(blankIndex + 1);
+    return result;
+  }
 
-        function updateTiles() {
-            tiles.forEach(tile => {
-                tile.element.style.top = `${tile.row * TILE_SIZE + OFFSET}px`;
-                tile.element.style.left = `${tile.col * TILE_SIZE + OFFSET}px`;
+  function isSolved() {
+    return board.every((value, index) => value === SOLVED[index]);
+  }
 
-                // Highlight if in correct position
-                const correctRow = Math.floor((tile.value - 1) / SIZE);
-                const correctCol = (tile.value - 1) % SIZE;
-                if (tile.row === correctRow && tile.col === correctCol) {
-                    tile.element.classList.add('correct');
-                } else {
-                    tile.element.classList.remove('correct');
-                }
-            });
-        }
+  function render() {
+    boardEl.innerHTML = '';
 
-        function canMove(row, col) {
-            return (Math.abs(row - emptyPos.row) === 1 && col === emptyPos.col) ||
-                   (Math.abs(col - emptyPos.col) === 1 && row === emptyPos.row);
-        }
+    board.forEach((value, index) => {
+      if (value === 0) {
+        const blank = document.createElement('div');
+        blank.className = 'blank';
+        blank.setAttribute('aria-hidden', 'true');
+        boardEl.appendChild(blank);
+        return;
+      }
 
-        function moveTile(row, col) {
-            const tileIndex = tiles.findIndex(t => t.row === row && t.col === col);
-            if (tileIndex > -1) {
-                const tempRow = tiles[tileIndex].row;
-                const tempCol = tiles[tileIndex].col;
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'tile';
+      tile.textContent = value;
+      tile.dataset.index = index;
+      tile.setAttribute('aria-label', 'Tile ' + value);
+      tile.addEventListener('click', () => move(index));
+      boardEl.appendChild(tile);
+    });
 
-                tiles[tileIndex].row = emptyPos.row;
-                tiles[tileIndex].col = emptyPos.col;
+    movesEl.textContent = moves;
+  }
 
-                emptyPos.row = tempRow;
-                emptyPos.col = tempCol;
+  function move(index) {
+    if (locked) return;
 
-                updateTiles();
-            }
-        }
+    const blankIndex = board.indexOf(0);
+    if (!neighbors(blankIndex).includes(index)) return;
 
-        function shuffle() {
-            messageDiv.innerText = '';
-            // Make 150 random valid moves
-            const moves = 150;
-            for (let i = 0; i < moves; i++) {
-                const movableTiles = tiles.filter(t => canMove(t.row, t.col));
-                if (movableTiles.length > 0) {
-                    const randomTile = movableTiles[Math.floor(Math.random() * movableTiles.length)];
+    [board[blankIndex], board[index]] = [board[index], board[blankIndex]];
+    moves++;
+    messageEl.textContent = '';
+    render();
 
-                    const tileIndex = tiles.findIndex(t => t === randomTile);
-                    const tempRow = tiles[tileIndex].row;
-                    const tempCol = tiles[tileIndex].col;
-                    tiles[tileIndex].row = emptyPos.row;
-                    tiles[tileIndex].col = emptyPos.col;
-                    emptyPos.row = tempRow;
-                    emptyPos.col = tempCol;
-                }
-            }
-            updateTiles();
-        }
+    if (isSolved()) {
+      locked = true;
+      messageEl.textContent = 'You solved it in ' + moves + ' moves!';
+    }
+  }
 
-        function checkWin() {
-            let win = true;
-            for (let i = 0; i < tiles.length; i++) {
-                const t = tiles[i];
-                const expectedRow = Math.floor((t.value - 1) / SIZE);
-                const expectedCol = (t.value - 1) % SIZE;
-                if (t.row !== expectedRow || t.col !== expectedCol) {
-                    win = false;
-                    break;
-                }
-            }
-            if (win) {
-                messageDiv.innerText = 'You Win!';
-            }
-        }
+  function shuffledBoard() {
+    let result = SOLVED.slice();
+    let blank = 15;
+    let previousBlank = -1;
 
-        shuffleBtn.addEventListener('click', shuffle);
+    for (let i = 0; i < 250; i++) {
+      let choices = neighbors(blank).filter(i => i !== previousBlank);
+      if (choices.length === 0) choices = neighbors(blank);
 
-        init();
-        shuffle();
+      const choice = choices[Math.floor(Math.random() * choices.length)];
+      [result[blank], result[choice]] = [result[choice], result[blank]];
+      previousBlank = blank;
+      blank = choice;
+    }
 
-    </script>
+    if (result.every((v, i) => v === SOLVED[i])) {
+      const choices = neighbors(blank);
+      const choice = choices[0];
+      [result[blank], result[choice]] = [result[choice], result[blank]];
+    }
+
+    return result;
+  }
+
+  function newGame() {
+    board = shuffledBoard();
+    startingBoard = board.slice();
+    moves = 0;
+    locked = false;
+    messageEl.textContent = '';
+    render();
+  }
+
+  function resetGame() {
+    board = startingBoard.slice();
+    moves = 0;
+    locked = false;
+    messageEl.textContent = '';
+    render();
+  }
+
+  newGameBtn.addEventListener('click', newGame);
+  resetBtn.addEventListener('click', resetGame);
+
+  newGame();
+})();
+</script>
 </body>
 </html>
