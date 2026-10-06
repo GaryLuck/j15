@@ -22,7 +22,14 @@ body{
 }
 .app{width:min(94vw,580px);text-align:center}
 h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
-.status{display:flex;justify-content:center;gap:24px;margin:8px 0 14px;font-size:clamp(16px,4vw,20px)}
+.status{
+  display:flex;
+  justify-content:center;
+  gap:clamp(12px,4vw,24px);
+  flex-wrap:wrap;
+  margin:8px 0 14px;
+  font-size:clamp(15px,3.8vw,20px);
+}
 .board{
   width:var(--board-size);
   height:var(--board-size);
@@ -79,8 +86,11 @@ h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
 <body>
 <main class="app">
   <h1>15 Tile Puzzle</h1>
+
   <div class="status">
     <span>Moves: <strong id="moves">0</strong></span>
+    <span>Time: <strong id="time">0:00</strong></span>
+    <span>Best: <strong id="bestTime">--:--</strong></span>
   </div>
 
   <div id="board" class="board" aria-label="15 tile puzzle"></div>
@@ -98,9 +108,12 @@ h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
 (() => {
   const SIZE = 4;
   const SOLVED = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0];
+  const BEST_TIME_KEY = 'fifteenPuzzleBestTimeSeconds';
 
   const boardEl = document.getElementById('board');
   const movesEl = document.getElementById('moves');
+  const timeEl = document.getElementById('time');
+  const bestTimeEl = document.getElementById('bestTime');
   const messageEl = document.getElementById('message');
   const newGameBtn = document.getElementById('newGame');
   const resetBtn = document.getElementById('reset');
@@ -109,6 +122,85 @@ h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
   let startingBoard = SOLVED.slice();
   let moves = 0;
   let locked = false;
+
+  let timerId = null;
+  let startTime = null;
+  let elapsedSeconds = 0;
+  let timerStarted = false;
+
+  let bestTime = loadBestTime();
+
+  function formatTime(totalSeconds) {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return minutes + ':' + String(seconds).padStart(2, '0');
+  }
+
+  function loadBestTime() {
+    try {
+      const saved = localStorage.getItem(BEST_TIME_KEY);
+      if (saved === null) return null;
+      const value = Number(saved);
+      return Number.isFinite(value) && value >= 0 ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveBestTime(seconds) {
+    try {
+      localStorage.setItem(BEST_TIME_KEY, String(seconds));
+    } catch {
+      // The puzzle still works if browser storage is unavailable.
+    }
+  }
+
+  function updateBestTimeDisplay() {
+    bestTimeEl.textContent = bestTime === null ? '--:--' : formatTime(bestTime);
+  }
+
+  function updateTimerDisplay() {
+    timeEl.textContent = formatTime(elapsedSeconds);
+  }
+
+  function startTimer() {
+    if (timerStarted || locked) return;
+
+    timerStarted = true;
+    startTime = Date.now() - elapsedSeconds * 1000;
+
+    timerId = setInterval(() => {
+      elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      updateTimerDisplay();
+    }, 250);
+  }
+
+  function stopTimer() {
+    if (!timerStarted) return;
+
+    elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    timerStarted = false;
+    startTime = null;
+
+    if (timerId !== null) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+
+    updateTimerDisplay();
+  }
+
+  function resetTimer() {
+    if (timerId !== null) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+
+    timerStarted = false;
+    startTime = null;
+    elapsedSeconds = 0;
+    updateTimerDisplay();
+  }
 
   function neighbors(blankIndex) {
     const row = Math.floor(blankIndex / SIZE);
@@ -156,6 +248,8 @@ h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
     const blankIndex = board.indexOf(0);
     if (!neighbors(blankIndex).includes(index)) return;
 
+    startTimer();
+
     [board[blankIndex], board[index]] = [board[index], board[blankIndex]];
     moves++;
     messageEl.textContent = '';
@@ -163,7 +257,20 @@ h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
 
     if (isSolved()) {
       locked = true;
-      messageEl.textContent = 'You solved it in ' + moves + ' moves!';
+      stopTimer();
+
+      let newBest = false;
+      if (bestTime === null || elapsedSeconds < bestTime) {
+        bestTime = elapsedSeconds;
+        saveBestTime(bestTime);
+        updateBestTimeDisplay();
+        newBest = true;
+      }
+
+      messageEl.textContent =
+        'You solved it in ' + moves + ' moves and ' +
+        formatTime(elapsedSeconds) +
+        (newBest ? ' — new best time!' : '!');
     }
   }
 
@@ -197,6 +304,7 @@ h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
     moves = 0;
     locked = false;
     messageEl.textContent = '';
+    resetTimer();
     render();
   }
 
@@ -205,12 +313,14 @@ h1{margin:0 0 8px;font-size:clamp(28px,7vw,46px)}
     moves = 0;
     locked = false;
     messageEl.textContent = '';
+    resetTimer();
     render();
   }
 
   newGameBtn.addEventListener('click', newGame);
   resetBtn.addEventListener('click', resetGame);
 
+  updateBestTimeDisplay();
   newGame();
 })();
 </script>
